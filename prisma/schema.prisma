@@ -1,0 +1,266 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters", "multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  schemas  = ["crm_management"]
+}
+
+// ==================== DEPARTMENT ====================
+model Department {
+  id          Int        @id @default(autoincrement())
+  code        String     @unique
+  name        String
+  description String?
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  positions   Position[]
+  employees   Employee[]
+
+  @@schema("crm_management")
+}
+
+// ==================== POSITION ====================
+model Position {
+  id           Int        @id @default(autoincrement())
+  code         String     @unique
+  name         String
+  description  String?
+  level        Int        @default(1)
+  baseSalary   Float?
+  departmentId Int
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  department   Department @relation(fields: [departmentId], references: [id])
+  employees    Employee[]
+
+  @@schema("crm_management")
+}
+
+// ==================== EMPLOYEE ====================
+model Employee {
+  id                    Int               @id @default(autoincrement())
+  employeeCode          String            @unique
+  foodOrderingUserId    Int?              @unique
+  firstName             String
+  lastName              String
+  nickname              String?
+  email                 String?           @unique
+  phone                 String?
+  address               String?
+  dateOfBirth           DateTime?
+  gender                Gender?
+  nationalId            String?           @unique
+  departmentId          Int
+  positionId            Int
+  employmentType        EmploymentType    @default(FULL_TIME)
+  startDate             DateTime          @default(now())
+  endDate               DateTime?
+  baseSalary            Float
+  bankAccount           String?
+  bankName              String?
+  status                EmployeeStatus    @default(ACTIVE)
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  imageUrl              String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  department            Department        @relation(fields: [departmentId], references: [id])
+  position              Position          @relation(fields: [positionId], references: [id])
+  salaryRecords         SalaryRecord[]
+  employeeBenefits      EmployeeBenefit[]
+  attendances           Attendance[]
+  leaveRequests         LeaveRequest[]
+
+  @@schema("crm_management")
+}
+
+// ==================== SALARY RECORD ====================
+model SalaryRecord {
+  id              Int          @id @default(autoincrement())
+  employeeId      Int
+  month           Int
+  year            Int
+  baseSalary      Float
+  overtimeHours   Float        @default(0)
+  overtimeRate    Float        @default(1.5)
+  overtimeAmount  Float        @default(0)
+  bonus           Float        @default(0)
+  allowances      Float        @default(0)
+  commission      Float        @default(0)
+  socialSecurity  Float        @default(0)
+  tax             Float        @default(0)
+  otherDeductions Float        @default(0)
+  deductionNotes  String?
+  grossSalary     Float
+  netSalary       Float
+  status          SalaryStatus @default(PENDING)
+  paidAt          DateTime?
+  paymentMethod   String?
+  paymentRef      String?
+  notes           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  employee        Employee     @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, month, year])
+  @@schema("crm_management")
+}
+
+// ==================== BENEFIT ====================
+model Benefit {
+  id               Int               @id @default(autoincrement())
+  code             String            @unique
+  name             String
+  description      String?
+  type             BenefitType
+  defaultAmount    Float?
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  employeeBenefits EmployeeBenefit[]
+
+  @@schema("crm_management")
+}
+
+// ==================== EMPLOYEE BENEFIT ====================
+model EmployeeBenefit {
+  id         Int       @id @default(autoincrement())
+  employeeId Int
+  benefitId  Int
+  amount     Float
+  startDate  DateTime  @default(now())
+  endDate    DateTime?
+  isActive   Boolean   @default(true)
+  notes      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  employee   Employee  @relation(fields: [employeeId], references: [id])
+  benefit    Benefit   @relation(fields: [benefitId], references: [id])
+
+  @@unique([employeeId, benefitId])
+  @@schema("crm_management")
+}
+
+// ==================== ATTENDANCE ====================
+model Attendance {
+  id            Int              @id @default(autoincrement())
+  employeeId    Int
+  date          DateTime         @db.Date
+  checkIn       DateTime?
+  checkOut      DateTime?
+  status        AttendanceStatus @default(PRESENT)
+  workHours     Float?
+  overtimeHours Float?
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  employee      Employee         @relation(fields: [employeeId], references: [id])
+
+  @@unique([employeeId, date])
+  @@schema("crm_management")
+}
+
+// ==================== LEAVE REQUEST ====================
+model LeaveRequest {
+  id         Int         @id @default(autoincrement())
+  employeeId Int
+  type       LeaveType
+  startDate  DateTime    @db.Date
+  endDate    DateTime    @db.Date
+  days       Float
+  reason     String?
+  status     LeaveStatus @default(PENDING)
+  approvedBy Int?
+  approvedAt DateTime?
+  notes      String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  employee   Employee    @relation(fields: [employeeId], references: [id])
+
+  @@schema("crm_management")
+}
+
+// ==================== ENUMS ====================
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+
+  @@schema("crm_management")
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  CONTRACT
+  INTERN
+
+  @@schema("crm_management")
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  INACTIVE
+  ON_LEAVE
+  TERMINATED
+
+  @@schema("crm_management")
+}
+
+enum SalaryStatus {
+  PENDING
+  APPROVED
+  PAID
+  CANCELLED
+
+  @@schema("crm_management")
+}
+
+enum BenefitType {
+  HEALTH_INSURANCE
+  TRANSPORTATION
+  MEAL_ALLOWANCE
+  HOUSING
+  PHONE_ALLOWANCE
+  BONUS
+  OTHER
+
+  @@schema("crm_management")
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  HALF_DAY
+  ON_LEAVE
+  HOLIDAY
+
+  @@schema("crm_management")
+}
+
+enum LeaveType {
+  ANNUAL
+  SICK
+  PERSONAL
+  MATERNITY
+  PATERNITY
+  UNPAID
+  OTHER
+
+  @@schema("crm_management")
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+
+  @@schema("crm_management")
+}
